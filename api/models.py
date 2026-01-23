@@ -1,7 +1,7 @@
 from django.db import models
 
 class Customer(models.Model):
-    customer_id = models.IntegerField(unique=True, primary_key=True)
+    customer_id = models.AutoField(unique=True, primary_key=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     age = models.IntegerField()

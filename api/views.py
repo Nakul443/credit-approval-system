@@ -1,3 +1,6 @@
+# decision maker file
+# takes input -> performs calculations -> talks to the db -> decides what final response will look like
+
 from django.shortcuts import render
 
 # Create your views here

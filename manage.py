@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
 import os
 import sys
 
-from api.tasks import ingest_customer_data
-ingest_customer_data.delay('path/to/customer_data.xlsx')
-
 def main():
     """Run administrative tasks."""
+    # This line tells Django where your settings.py is. It MUST happen first.
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     try:
         from django.core.management import execute_from_command_line
@@ -18,7 +15,6 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()
