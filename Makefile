@@ -13,15 +13,18 @@ migrate:
 	python manage.py migrate
 
 # Like "npm run dev"
-dev:
-	# This starts redis, then runs django and celery together
+# This starts redis, then runs django and celery together
+dev: stop
 	sudo service redis-server start
-	python manage.py runserver & ./venv/bin/celery -A core worker --loglevel=info
+	./venv/bin/python manage.py runserver --noreload & ./venv/bin/celery -A core worker --loglevel=info
 
-# To stop everything
+# to stop everything
 stop:
-	pkill -f "runserver"
-	pkill -f "celery"
+	# Kill process on port 8000
+	sudo fuser -k 8000/tcp || true
+	# Use [c] and [m] trick to prevent pkill from killing the make command itself
+	pkill -9 -f "[c]elery worker" || true
+	pkill -9 -f "[m]anage.py runserver" || true
 
 ingest:
 	python manage.py shell -c "from api.tasks import ingest_customer_data, ingest_loan_data; ingest_customer_data.delay('customer_data.xlsx'); ingest_loan_data.delay('loan_data.xlsx')"
