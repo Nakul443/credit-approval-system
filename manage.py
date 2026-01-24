@@ -1,3 +1,5 @@
+# used to run the server, create migrations, run tests
+
 #!/usr/bin/env python
 import os
 import sys

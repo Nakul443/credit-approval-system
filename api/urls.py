@@ -5,7 +5,7 @@
 # differs from core/urls.py
 
 from django.urls import path
-from . import views
+from . import views # import views.py from current directory
 
 urlpatterns = [
     # /api/register/

@@ -1,3 +1,5 @@
+# main entrance of the entire project
+
 """
 URL configuration for core project.
 
@@ -20,8 +22,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+# python list that django scans top to bottom every time a request comes in
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls), # if URL starts with /admin/, sends user to admin dashboard
     path('api/', include('api.urls')),  # This connects 'api' app urls
     # prefixes all routes with /api/
 ]

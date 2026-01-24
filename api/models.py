@@ -23,5 +23,7 @@ class Loan(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    # formatted string, allows to put variables directly inside a sentence
+    # displays a record in plain english instead of ("Customer Object 1")
     def __str__(self):
         return f"Loan {self.loan_id} for {self.customer.first_name}"

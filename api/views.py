@@ -9,15 +9,13 @@ from .models import Customer, Loan
 from .serializers import CustomerSerializer
 from datetime import date
 from dateutil.relativedelta import relativedelta
-# Added import for the service layer logic
 from .services import calculate_credit_score, get_eligibility_status
 
-
+# create a new customer profile
 @api_view(['POST'])
 def register(request):
     try:
         data = request.data # JSON the user sent
-        
         income = data.get('monthly_income')
 
         approved_limit = round((36*income) / 100000) * 100000
@@ -40,6 +38,7 @@ def register(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# checks a loan application, doesn't save it
 @api_view(['POST'])
 def check_eligibility(request):
     data = request.data
@@ -51,19 +50,17 @@ def check_eligibility(request):
     try:
         # get the customer from the db
         customer = Customer.objects.get(customer_id=customer_id)
-        
-        # --- REFACTORED LOGIC ---
-        # Using service layer to get approval, corrected rate, and current credit score
+
+        # imported from /api/services.py
         approval, corrected_interest_rate = get_eligibility_status(
             customer, loan_amount, interest_rate, tenure
         )
         credit_score = calculate_credit_score(customer)
         
-        # Calculate current EMIs for the debug info
+        # retrieves all loans for a particular user
         current_loans = Loan.objects.filter(customer=customer)
         total_current_emis = sum(l.monthly_repayment for l in current_loans)
-        
-        # return response with corrected values and debug info
+
         return Response({
             "customer_id": customer_id,
             "approval": approval,
@@ -82,9 +79,9 @@ def check_eligibility(request):
     except Customer.DoesNotExist:
         return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
 
+# checks eligibility AND saves the loan if approved
 @api_view(['POST'])
 def create_loan(request):
-    # This endpoint checks eligibility AND saves the loan if approved
     data = request.data
     customer_id = data.get('customer_id')
     loan_amount = data.get('loan_amount')
@@ -95,14 +92,13 @@ def create_loan(request):
 
     try:
         customer = Customer.objects.get(customer_id=customer_id)
-        
-        # --- REFACTORED LOGIC ---
-        # 1. Determine Approval and Corrected Interest Rate using Service Layer
+
+        # Determine Approval and Corrected Interest Rate using Service Layer
         approval, corrected_interest_rate = get_eligibility_status(
             customer, loan_amount, interest_rate, tenure
         )
 
-        # 2. Final Decision
+        # Final Decision
         if approval:
             # Calculate installment
             monthly_installment = round(loan_amount / tenure, 2)
@@ -127,7 +123,6 @@ def create_loan(request):
                 "monthly_installment": monthly_installment
             }, status=status.HTTP_201_CREATED)
         else:
-            # Match PDF requirement for rejected loans
             return Response({
                 "loan_id": None, # Should be null in JSON
                 "customer_id": customer_id,
