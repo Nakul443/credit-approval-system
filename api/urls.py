@@ -18,7 +18,7 @@ urlpatterns = [
     path('view-loan/<int:loan_id>/', views.view_loan, name='view_loan'),
     
     # /api/view-loans/:customer_id/
-    path('view-loans/<int:customer_id>/', views.view_loans_by_customer, name='view_loans_by_customer'),
+    path('view-loans-customer/<int:customer_id>/', views.view_loans_by_customer, name='view_loans_by_customer'),
     
     # /api/create-loan/
     path('create-loan/', views.create_loan, name='create_loan'),

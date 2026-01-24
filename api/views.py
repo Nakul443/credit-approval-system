@@ -17,6 +17,11 @@ def register(request):
     try:
         data = request.data # JSON the user sent
         income = data.get('monthly_income')
+        phone_number = data.get('phone_number')
+
+        # Check if phone number already exists to avoid duplicates
+        if Customer.objects.filter(phone_number=phone_number).exists():
+            return Response({"error": "Phone number already registered"}, status=status.HTTP_400_BAD_REQUEST)
 
         approved_limit = round((36*income) / 100000) * 100000
 
@@ -25,7 +30,7 @@ def register(request):
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
             age=data.get('age'),
-            phone_number=data.get('phone_number'),
+            phone_number=phone_number,
             monthly_salary=income,
             approved_limit=approved_limit
         )
