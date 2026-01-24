@@ -13,8 +13,8 @@ class Customer(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 class Loan(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='loans')
-    loan_id = models.IntegerField(unique=True, primary_key=True)
+    customer = models.ForeignKey(Customer, related_name='customer_loans', on_delete=models.CASCADE)
+    loan_id = models.AutoField(unique=True, primary_key=True)
     loan_amount = models.FloatField()
     tenure = models.IntegerField()
     interest_rate = models.FloatField()

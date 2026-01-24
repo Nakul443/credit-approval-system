@@ -8,29 +8,10 @@ from rest_framework import status
 from .models import Customer, Loan
 from .serializers import CustomerSerializer
 from datetime import date
+from dateutil.relativedelta import relativedelta
+# Added import for the service layer logic
+from .services import calculate_credit_score, get_eligibility_status
 
-# logic to calculate credit score
-def calculate_credit_score(customer):
-    loans = Loan.objects.filter(customer=customer)
-
-    # Past Payment History
-    total_emis = sum(l.tenure for l in loans)
-    on_time_emis = sum(l.emis_paid_on_time for l in loans)
-    payment_score = (on_time_emis / total_emis * 100) if total_emis > 0 else 100
-
-    # Number of loans taken in the past
-    num_loans = loans.count()
-    # If a customer has many loans, it reduces their score
-    loan_count_score = max(0, 100 - (num_loans * 5)) # Penalty for too many loans
-
-    # Loans taken in current year
-    current_year_loans = loans.filter(start_date__year=2026).count()
-    year_score = max(0, 100 - (current_year_loans * 20))
-
-    # Final Weighted Score
-    # 50% weight to payment history, 20% to number of loans, 30% to recent activity
-    credit_score = (payment_score * 0.5) + (loan_count_score * 0.2) + (year_score * 0.3)
-    return round(credit_score)
 
 @api_view(['POST'])
 def register(request):
@@ -71,40 +52,16 @@ def check_eligibility(request):
         # get the customer from the db
         customer = Customer.objects.get(customer_id=customer_id)
         
-        # call our helper function to get the score (0-100)
+        # --- REFACTORED LOGIC ---
+        # Using service layer to get approval, corrected rate, and current credit score
+        approval, corrected_interest_rate = get_eligibility_status(
+            customer, loan_amount, interest_rate, tenure
+        )
         credit_score = calculate_credit_score(customer)
-
-        # LOGIC for approval and interest rate correction
-        approval = False
-        corrected_interest_rate = interest_rate
-
-        # check slabs according to the credit rating
-        # Added >= to handle exact scores like 50, 30, and 10
-        if credit_score > 50:
-            approval = True
-            # No changes to interest_rate if score is high
-        elif 50 >= credit_score > 30:
-            approval = True
-            # if rating is mid-range, interest must be at least 12%
-            if interest_rate < 12:
-                corrected_interest_rate = 12.0
-        elif 30 >= credit_score > 10:
-            approval = True
-            # if rating is low, interest must be at least 16%
-            if interest_rate < 16:
-                corrected_interest_rate = 16.0
-        else:
-            approval = False # reject score below 10 or exactly 10
-
-        # SUM OF ALL CURRENT EMIs check
-        # We need to see if they are already paying too much in other loans
+        
+        # Calculate current EMIs for the debug info
         current_loans = Loan.objects.filter(customer=customer)
         total_current_emis = sum(l.monthly_repayment for l in current_loans)
-        
-        # if existing EMIs are more than 50% of salary, we must reject the new loan
-        # This is why your output was 'False' even with a score of 80!
-        if total_current_emis > (customer.monthly_salary * 0.5):
-            approval = False
         
         # return response with corrected values and debug info
         return Response({
@@ -125,6 +82,62 @@ def check_eligibility(request):
     except Customer.DoesNotExist:
         return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['POST'])
+def create_loan(request):
+    # This endpoint checks eligibility AND saves the loan if approved
+    data = request.data
+    customer_id = data.get('customer_id')
+    loan_amount = data.get('loan_amount')
+    interest_rate = data.get('interest_rate')
+    tenure = data.get('tenure')
+    start_date = date.today()
+    end_date = start_date + relativedelta(months=tenure)
+
+    try:
+        customer = Customer.objects.get(customer_id=customer_id)
+        
+        # --- REFACTORED LOGIC ---
+        # 1. Determine Approval and Corrected Interest Rate using Service Layer
+        approval, corrected_interest_rate = get_eligibility_status(
+            customer, loan_amount, interest_rate, tenure
+        )
+
+        # 2. Final Decision
+        if approval:
+            # Calculate installment
+            monthly_installment = round(loan_amount / tenure, 2)
+
+            # CREATE THE RECORD
+            new_loan = Loan.objects.create(
+                customer=customer,
+                loan_amount=loan_amount,
+                interest_rate=corrected_interest_rate,
+                tenure=tenure,
+                monthly_repayment=monthly_installment,
+                emis_paid_on_time=0,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            return Response({
+                "loan_id": new_loan.loan_id,
+                "customer_id": customer_id,
+                "loan_approved": True,
+                "message": "Loan successfully sanctioned",
+                "monthly_installment": monthly_installment
+            }, status=status.HTTP_201_CREATED)
+        else:
+            # Match PDF requirement for rejected loans
+            return Response({
+                "loan_id": None, # Should be null in JSON
+                "customer_id": customer_id,
+                "loan_approved": False,
+                "message": "Loan rejected: Eligibility criteria not met",
+                "monthly_installment": 0
+            }, status=status.HTTP_200_OK)
+
+    except Customer.DoesNotExist:
+        return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 def view_loan(request, loan_id):
@@ -148,3 +161,18 @@ def view_loan(request, loan_id):
 
     except Loan.DoesNotExist:
         return Response({"error": "Loan not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def view_loans_by_customer(request, customer_id):
+    # PDF structure: Returns a list of all current loans for a customer
+    loans = Loan.objects.filter(customer__customer_id=customer_id)
+    loan_data = []
+    for l in loans:
+        loan_data.append({
+            "loan_id": l.loan_id,
+            "loan_amount": l.loan_amount,
+            "interest_rate": l.interest_rate,
+            "monthly_installment": l.monthly_repayment,
+            "repayments_left": l.tenure - l.emis_paid_on_time
+        })
+    return Response(loan_data, status=status.HTTP_200_OK)

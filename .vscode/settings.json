@@ -1,11 +1,16 @@
 {
     "cSpell.words": [
         "anage",
+        "dateutil",
         "emis",
         "fuser",
+        "gdun",
+        "libpq",
         "makemigrations",
         "noreload",
         "pkill",
+        "postpass",
+        "relativedelta",
         "runserver"
     ]
 }
