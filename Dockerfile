@@ -1,26 +1,22 @@
-# Use official Python image
 FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Use the = format to fix those warnings
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies for psycopg2 and other tools
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Now this will work because the file exists!
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
 COPY . .
 
-# Expose the port Django runs on
 EXPOSE 8000

@@ -28,3 +28,8 @@ stop:
 
 ingest:
 	python manage.py shell -c "from api.tasks import ingest_customer_data, ingest_loan_data; ingest_customer_data.delay('customer_data.xlsx'); ingest_loan_data.delay('loan_data.xlsx')"
+
+
+docker-prepare:
+	pip freeze > requirements.txt
+	docker-compose up --build
