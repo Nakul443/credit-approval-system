@@ -5,11 +5,11 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Customer, Loan
-from .serializers import CustomerSerializer
+from .models import Customer, Loan  # Relative import stays same
+from .serializers import CustomerSerializer # Relative import stays same
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from .services import calculate_credit_score, get_eligibility_status
+from .services import calculate_credit_score, get_eligibility_status # Relative import stays same
 
 # create a new customer profile
 @api_view(['POST'])
