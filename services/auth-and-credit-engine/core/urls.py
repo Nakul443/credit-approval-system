@@ -21,10 +21,19 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 # python list that django scans top to bottom every time a request comes in
 urlpatterns = [
     path('admin/', admin.site.urls), # if URL starts with /admin/, sends user to admin dashboard
-    path('api/', include('api.urls')),  # This connects 'api' app urls
-    # prefixes all routes with /api/
+    
+    # Identity & Auth Routes
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Scoring & Credit Routes
+    path('api/scoring/', include('apps.scoring.urls')),  # Updated path to apps.scoring
 ]
